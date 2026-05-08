@@ -1,0 +1,109 @@
+{
+  "project": "CINEIQ movie recommender dataset cleaning",
+  "settings": {
+    "sample_rows": null,
+    "ratings_chunksize": 1000000,
+    "write_full_ratings": false,
+    "genome_relevance_threshold": 0.7
+  },
+  "outputs": {
+    "movies_clean": {
+      "rows": 62423,
+      "columns": [
+        "movieId",
+        "title",
+        "clean_title",
+        "year",
+        "genres",
+        "genres_list",
+        "primary_genre",
+        "genre_count"
+      ]
+    },
+    "links_clean": {
+      "rows": 62423,
+      "columns": [
+        "movieId",
+        "imdbId",
+        "tmdbId",
+        "imdb_url_id"
+      ]
+    },
+    "imdb_reviews_clean": {
+      "rows": 49582,
+      "columns": [
+        "review_clean",
+        "sentiment",
+        "sentiment_label",
+        "review_length"
+      ]
+    },
+    "tmdb_credits_clean": {
+      "rows": 4803,
+      "columns": [
+        "tmdbId",
+        "tmdb_title",
+        "top_cast",
+        "cast_count",
+        "director",
+        "writers",
+        "producers",
+        "composer"
+      ]
+    },
+    "movie_rating_stats": {
+      "rows": 59047,
+      "columns": [
+        "movieId",
+        "rating_count",
+        "rating_mean",
+        "first_rating_at",
+        "last_rating_at"
+      ]
+    },
+    "movie_user_tags_top10": {
+      "rows": 45251,
+      "columns": [
+        "movieId",
+        "user_tags_top10"
+      ]
+    },
+    "movie_genome_tags_top20": {
+      "rows": 13770,
+      "columns": [
+        "movieId",
+        "genome_tags_top20"
+      ]
+    },
+    "movies_master": {
+      "rows": 62423,
+      "columns": [
+        "movieId",
+        "title",
+        "clean_title",
+        "year",
+        "genres",
+        "genres_list",
+        "primary_genre",
+        "genre_count",
+        "imdbId",
+        "tmdbId",
+        "imdb_url_id",
+        "rating_count",
+        "rating_mean",
+        "first_rating_at",
+        "last_rating_at",
+        "user_tags_top10",
+        "genome_tags_top20",
+        "tmdb_title",
+        "top_cast",
+        "cast_count",
+        "director",
+        "writers",
+        "producers",
+        "composer",
+        "content_features"
+      ]
+    }
+  }
+}
