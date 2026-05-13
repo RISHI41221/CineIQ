@@ -1,0 +1,27 @@
+Python Cache
+pycache/
+*.pyc
+
+Jupyter Cache
+.ipynb_checkpoints/
+
+Data
+raw_data/
+cleaned_data/
+*.csv
+
+Model Artifacts
+model_artifacts/
+*.pkl
+
+Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+.env
+.env/
+
+Windows OS Junk
+Thumbs.db
+Desktop.ini
