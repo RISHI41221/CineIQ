@@ -1,5 +1,5 @@
 Python Cache
-pycache/
+__pycache__/
 *.pyc
 
 Jupyter Cache
