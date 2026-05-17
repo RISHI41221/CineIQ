@@ -191,6 +191,35 @@ def _is_movie_not_found_error(exc: Exception) -> bool:
     return "not found" in str(exc).lower()
 
 
+def _lookup_movie_genres(movies_df: pd.DataFrame, movie_title: str) -> str:
+    """Resolve the searched movie's genre string for explanation generation."""
+
+    if not isinstance(movie_title, str) or not movie_title.strip():
+        return ""
+    if "genres" not in movies_df.columns:
+        return ""
+
+    normalized_title = movie_title.strip().casefold()
+    title_columns = [column for column in ("clean_title", "title") if column in movies_df.columns]
+
+    for column in title_columns:
+        matches = movies_df.loc[
+            movies_df[column].fillna("").astype(str).str.strip().str.casefold() == normalized_title,
+            "genres",
+        ]
+        if matches.empty:
+            continue
+
+        genre_value = matches.iloc[0]
+        if genre_value is None or pd.isna(genre_value):
+            return ""
+
+        cleaned_genres = str(genre_value).strip()
+        return "" if cleaned_genres.lower() == "nan" else cleaned_genres
+
+    return ""
+
+
 def _build_response_payload(result_df: pd.DataFrame) -> list[RecommendationResponse]:
     response_columns = [
         "title",
@@ -280,7 +309,15 @@ async def recommend(payload: RecommendationRequest, request: Request) -> list[Re
             top_n=payload.top_n,
         )
         reranked_df = apply_sentiment_reranking(hybrid_df, request.app.state.movies_df)
-        explained_df = add_explanations(reranked_df)
+        search_movie_genres = _lookup_movie_genres(
+            request.app.state.movies_df,
+            payload.movie_title,
+        )
+        explained_df = add_explanations(
+            reranked_df,
+            search_query=payload.movie_title,
+            search_movie_genres=search_movie_genres,
+        )
         return _build_response_payload(explained_df)
     except (RuntimeError, ValueError) as exc:
         status_code = status.HTTP_404_NOT_FOUND if _is_movie_not_found_error(exc) else status.HTTP_400_BAD_REQUEST

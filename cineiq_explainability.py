@@ -1,14 +1,18 @@
 """Rule-based explainability utilities for CINEIQ recommendations.
 
-This module adds a lightweight explanation string to each recommendation based
-on the strongest recommendation signal and optional sentiment context.
+This module builds dynamic explanation strings from the strongest
+recommendation signal, shared metadata, and sentiment context.
 
 Typical usage
 -------------
 ```python
 from cineiq_explainability import add_explanations
 
-final_df = add_explanations(reranked_df)
+final_df = add_explanations(
+    reranked_df,
+    search_query="Toy Story",
+    search_movie_genres="Adventure|Animation|Children|Comedy|Fantasy",
+)
 ```
 """
 
@@ -19,24 +23,17 @@ from typing import Any
 import pandas as pd
 
 
-TFIDF_EXPLANATION = (
-    "Recommended because it shares similar genres, themes, or cast members "
-    "with your search."
-)
-PEARSON_EXPLANATION = (
-    "Recommended because users who share your specific movie tastes rated "
-    "this highly."
-)
-SVD_EXPLANATION = (
-    "Recommended because our personalized prediction model strongly matches "
-    "this to your profile."
-)
-POSITIVE_SENTIMENT_SUFFIX = " 🔥 Audiences are currently raving about it!"
-NEGATIVE_SENTIMENT_SUFFIX = " ⚠️ Note: General audience reception is highly mixed."
+POSITIVE_SENTIMENT_THRESHOLD = 0.6
+NEGATIVE_SENTIMENT_THRESHOLD = -0.4
 
 
-def add_explanations(recommendations_df: pd.DataFrame) -> pd.DataFrame:
-    """Attach a rule-based explanation string to each recommendation row.
+def add_explanations(
+    recommendations_df: pd.DataFrame,
+    *,
+    search_query: str = "",
+    search_movie_genres: Any = None,
+) -> pd.DataFrame:
+    """Attach a dynamic explanation string to each recommendation row.
 
     Parameters
     ----------
@@ -46,6 +43,10 @@ def add_explanations(recommendations_df: pd.DataFrame) -> pd.DataFrame:
         - `pearson_score`
         - `svd_score`
         - `vader_compound_score`
+    search_query:
+        The original movie title the user searched for.
+    search_movie_genres:
+        The genre string for the searched movie, if available.
 
     Returns
     -------
@@ -73,7 +74,15 @@ def add_explanations(recommendations_df: pd.DataFrame) -> pd.DataFrame:
     result["svd_score"] = result["svd_score"].fillna(0.0)
     result["vader_compound_score"] = result["vader_compound_score"].fillna(0.0)
 
-    result["explanation"] = result.apply(_build_explanation_for_row, axis=1)
+    normalized_search_query = _normalize_search_query(search_query)
+    result["explanation"] = result.apply(
+        lambda row: _build_explanation_for_row(
+            row,
+            search_query=normalized_search_query,
+            search_movie_genres=search_movie_genres,
+        ),
+        axis=1,
+    )
     return result
 
 
@@ -98,13 +107,37 @@ def _validate_recommendation_schema(recommendations_df: pd.DataFrame) -> None:
         )
 
 
-def _build_explanation_for_row(row: pd.Series) -> str:
+def _build_explanation_for_row(
+    row: pd.Series,
+    *,
+    search_query: str,
+    search_movie_genres: Any,
+) -> str:
     """Create one explanation string for a recommendation row."""
 
     primary_driver = _select_primary_driver(row)
-    base_explanation = _base_explanation_from_driver(primary_driver)
-    sentiment_suffix = _sentiment_suffix(row.get("vader_compound_score", 0.0))
-    return f"{base_explanation}{sentiment_suffix}"
+    explanation_parts: list[str] = []
+
+    if primary_driver == "pearson" and search_query:
+        explanation_parts.append(
+            f"Fans of {search_query} also highly rated this film."
+        )
+
+    genre_explanation = _genre_match_explanation(
+        recommendation_genres=row.get("genres"),
+        search_movie_genres=search_movie_genres,
+    )
+    if genre_explanation:
+        explanation_parts.append(genre_explanation)
+
+    sentiment_explanation = _sentiment_suffix(row.get("vader_compound_score", 0.0))
+    if sentiment_explanation:
+        explanation_parts.append(sentiment_explanation)
+
+    if not explanation_parts:
+        explanation_parts.append(_driver_fallback_explanation(primary_driver, row))
+
+    return " ".join(explanation_parts)
 
 
 def _select_primary_driver(row: pd.Series) -> str:
@@ -122,17 +155,70 @@ def _select_primary_driver(row: pd.Series) -> str:
     return max(scored_drivers, key=lambda item: item[1])[0]
 
 
-def _base_explanation_from_driver(driver_name: str) -> str:
-    """Map the strongest model signal to a user-facing explanation template."""
+def _driver_fallback_explanation(driver_name: str, row: pd.Series) -> str:
+    """Build a dynamic fallback explanation for rows without richer context."""
 
     if driver_name == "tfidf":
-        return TFIDF_EXPLANATION
+        top_genres = _top_genres(row.get("genres"), limit=2)
+        if top_genres:
+            return (
+                "Matched through similar content signals, especially around "
+                f"{_join_with_and(top_genres)}."
+            )
+
+        tfidf_score = _safe_float(row.get("tfidf_score", 0.0))
+        return f"Matched through similar content signals with a TF-IDF score of {tfidf_score:.2f}."
+
     if driver_name == "pearson":
-        return PEARSON_EXPLANATION
+        pearson_score = _safe_float(row.get("pearson_score", 0.0))
+        return (
+            "Viewers with similar taste patterns drove this pick with a "
+            f"Pearson score of {pearson_score:.2f}."
+        )
+
     if driver_name == "svd":
-        return SVD_EXPLANATION
+        predicted_rating = row.get("svd_predicted_rating")
+        if predicted_rating is not None and not pd.isna(predicted_rating):
+            return (
+                "Predicted to be a strong fit for you with an estimated rating of "
+                f"{_safe_float(predicted_rating):.2f}."
+            )
+
+        svd_score = _safe_float(row.get("svd_score", 0.0))
+        return f"Predicted to be a strong fit for you with a personalized score of {svd_score:.2f}."
 
     raise ValueError(f"Unsupported explanation driver: {driver_name}")
+
+
+def _genre_match_explanation(
+    recommendation_genres: Any,
+    search_movie_genres: Any,
+) -> str:
+    """Describe the strongest shared genre overlap, if one exists."""
+
+    recommended_genres = _parse_genres(recommendation_genres)
+    if not recommended_genres:
+        return ""
+
+    search_genre_keys = {
+        genre.casefold()
+        for genre in _parse_genres(search_movie_genres)
+    }
+    if not search_genre_keys:
+        return ""
+
+    shared_genres = [
+        genre
+        for genre in recommended_genres
+        if genre.casefold() in search_genre_keys
+    ][:2]
+    if not shared_genres:
+        return ""
+
+    return (
+        "A strong match based on your interest in "
+        f"{_join_with_and(shared_genres)}."
+    )
 
 
 def _sentiment_suffix(vader_compound_score: Any) -> str:
@@ -140,11 +226,75 @@ def _sentiment_suffix(vader_compound_score: Any) -> str:
 
     compound_score = _safe_float(vader_compound_score)
 
-    if compound_score > 0.6:
-        return POSITIVE_SENTIMENT_SUFFIX
-    if compound_score < -0.4:
-        return NEGATIVE_SENTIMENT_SUFFIX
+    if compound_score > POSITIVE_SENTIMENT_THRESHOLD:
+        return (
+            "\U0001F525 Audiences are currently raving about it with a "
+            f"sentiment score of {compound_score:.2f}!"
+        )
+    if compound_score < NEGATIVE_SENTIMENT_THRESHOLD:
+        return (
+            "Audience reactions are more mixed right now with a sentiment "
+            f"score of {compound_score:.2f}."
+        )
     return ""
+
+
+def _top_genres(raw_genres: Any, limit: int = 2) -> list[str]:
+    """Return the first genres listed for a movie, preserving source order."""
+
+    return _parse_genres(raw_genres)[:max(limit, 0)]
+
+
+def _parse_genres(raw_genres: Any) -> list[str]:
+    """Parse a MovieLens-style pipe-delimited genre string into clean labels."""
+
+    if raw_genres is None or pd.isna(raw_genres):
+        return []
+
+    cleaned_genres = str(raw_genres).strip()
+    if not cleaned_genres or cleaned_genres.lower() == "nan":
+        return []
+    if cleaned_genres == "(no genres listed)":
+        return []
+
+    deduped_genres: list[str] = []
+    seen_genres: set[str] = set()
+    for genre in cleaned_genres.split("|"):
+        normalized_genre = genre.strip()
+        if not normalized_genre:
+            continue
+
+        lowered_genre = normalized_genre.casefold()
+        if lowered_genre in seen_genres:
+            continue
+
+        seen_genres.add(lowered_genre)
+        deduped_genres.append(normalized_genre)
+
+    return deduped_genres
+
+
+def _join_with_and(values: list[str]) -> str:
+    """Join one or two short labels into a natural-language phrase."""
+
+    if not values:
+        return ""
+    if len(values) == 1:
+        return values[0]
+    return f"{values[0]} and {values[1]}"
+
+
+def _normalize_search_query(search_query: Any) -> str:
+    """Normalize the user-entered search query without changing its casing."""
+
+    if search_query is None or pd.isna(search_query):
+        return ""
+
+    cleaned_query = str(search_query).strip()
+    if cleaned_query.lower() == "nan":
+        return ""
+
+    return cleaned_query
 
 
 def _safe_float(value: Any) -> float:
