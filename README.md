@@ -23,9 +23,9 @@ This project uses:
 
 Before you begin, make sure these tools are installed:
 
-- **Git**
-- **Docker Desktop**
-- **Anaconda**
+- **Git**  To clone this repository. ([Download Git](https://git-scm.com/downloads))
+- **Docker Desktop**  Required to run the isolated backend API and heavy ML models. ([Download Docker](https://www.docker.com/products/docker-desktop/))
+- **Anaconda**  Required to manage the Python environment and run the data pipeline. ([Download Anaconda](https://www.anaconda.com/download))
 
 If you only have VS Code installed right now, install the three tools above first.
 
@@ -52,7 +52,7 @@ C:
 After moving to the correct drive, run:
 
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/RISHI41221/CineIQ.git
 cd CineIQ
 ```
 
