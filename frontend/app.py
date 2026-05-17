@@ -90,7 +90,8 @@ if submitted:
                                 _format_score(movie.get("final_hybrid_score")),
                             )
 
-                        st.info(movie.get("explanation", "No explanation available."))
+                        explanation = str(movie.get("explanation") or "").strip()
+                        st.info(explanation or "No explanation available.")
                         st.divider()
 
             elif response.status_code == 404:

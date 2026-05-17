@@ -116,28 +116,24 @@ def _build_explanation_for_row(
     """Create one explanation string for a recommendation row."""
 
     primary_driver = _select_primary_driver(row)
-    explanation_parts: list[str] = []
-
-    if primary_driver == "pearson" and search_query:
-        explanation_parts.append(
-            f"Fans of {search_query} also highly rated this film."
-        )
-
-    genre_explanation = _genre_match_explanation(
+    movie_title = _format_movie_reference(row.get("title"))
+    shared_genres = _shared_genres(
         recommendation_genres=row.get("genres"),
         search_movie_genres=search_movie_genres,
     )
-    if genre_explanation:
-        explanation_parts.append(genre_explanation)
+    driver_sentence = _driver_specific_explanation(
+        primary_driver,
+        movie_title=movie_title,
+        search_query=search_query,
+        shared_genres=shared_genres,
+        row=row,
+    )
 
     sentiment_explanation = _sentiment_suffix(row.get("vader_compound_score", 0.0))
-    if sentiment_explanation:
-        explanation_parts.append(sentiment_explanation)
+    if not sentiment_explanation:
+        return driver_sentence
 
-    if not explanation_parts:
-        explanation_parts.append(_driver_fallback_explanation(primary_driver, row))
-
-    return " ".join(explanation_parts)
+    return f"{driver_sentence} {sentiment_explanation}"
 
 
 def _select_primary_driver(row: pd.Series) -> str:
@@ -155,70 +151,122 @@ def _select_primary_driver(row: pd.Series) -> str:
     return max(scored_drivers, key=lambda item: item[1])[0]
 
 
-def _driver_fallback_explanation(driver_name: str, row: pd.Series) -> str:
-    """Build a dynamic fallback explanation for rows without richer context."""
+def _driver_specific_explanation(
+    driver_name: str,
+    *,
+    movie_title: str,
+    search_query: str,
+    shared_genres: list[str],
+    row: pd.Series,
+) -> str:
+    """Build a movie-specific explanation sentence for the strongest driver."""
+
+    genre_phrase = _join_with_and(shared_genres)
+    variant_index = _template_variant_index(
+        driver_name,
+        movie_title,
+        search_query,
+        *shared_genres,
+        variant_count=3,
+    )
 
     if driver_name == "tfidf":
-        top_genres = _top_genres(row.get("genres"), limit=2)
-        if top_genres:
-            return (
-                "Matched through similar content signals, especially around "
-                f"{_join_with_and(top_genres)}."
-            )
-
-        tfidf_score = _safe_float(row.get("tfidf_score", 0.0))
-        return f"Matched through similar content signals with a TF-IDF score of {tfidf_score:.2f}."
+        if genre_phrase:
+            options = [
+                f"Our content analyzer matched {movie_title} to your search due to shared themes like {genre_phrase}.",
+                f"{movie_title} stood out in our TF-IDF content model because it overlaps with your search on genres such as {genre_phrase}.",
+                f"Content-based matching surfaced {movie_title} after spotting strong thematic overlap around {genre_phrase}.",
+            ]
+        else:
+            options = [
+                f"Our content analyzer matched {movie_title} to your search because its themes closely align with what you looked up.",
+                f"{movie_title} stood out in our TF-IDF content model thanks to strong content overlap with your search.",
+                f"Content-based matching surfaced {movie_title} after its story signals aligned closely with your query.",
+            ]
+        return options[variant_index]
 
     if driver_name == "pearson":
-        pearson_score = _safe_float(row.get("pearson_score", 0.0))
-        return (
-            "Viewers with similar taste patterns drove this pick with a "
-            f"Pearson score of {pearson_score:.2f}."
-        )
+        if search_query and genre_phrase:
+            options = [
+                f"Viewers who liked {search_query} also highly rated {movie_title}, with shared appeal in {genre_phrase}.",
+                f"Our Pearson collaborative signal linked {movie_title} to fans of {search_query}, especially around {genre_phrase}.",
+                f"People who responded well to {search_query} also tended to enjoy {movie_title}, particularly for its {genre_phrase} elements.",
+            ]
+        elif search_query:
+            options = [
+                f"Viewers who liked {search_query} also highly rated {movie_title}.",
+                f"Our Pearson collaborative signal linked {movie_title} to fans of {search_query}.",
+                f"People who responded well to {search_query} also tended to enjoy {movie_title}.",
+            ]
+        elif genre_phrase:
+            options = [
+                f"Similar viewers pushed {movie_title} upward in our collaborative model, with strong overlap in {genre_phrase}.",
+                f"Our Pearson taste matching favored {movie_title} for users with patterns like yours, especially around {genre_phrase}.",
+                f"Collaborative filtering highlighted {movie_title} because people with similar preferences responded well to its focus on {genre_phrase}.",
+            ]
+        else:
+            options = [
+                f"Viewers with taste patterns similar to yours helped push {movie_title} higher in our collaborative model.",
+                f"Our Pearson taste matching flagged {movie_title} as a strong pick among users who rate movies like you do.",
+                f"Collaborative filtering highlighted {movie_title} because people with similar preferences responded well to it.",
+            ]
+        return options[variant_index]
 
     if driver_name == "svd":
-        predicted_rating = row.get("svd_predicted_rating")
-        if predicted_rating is not None and not pd.isna(predicted_rating):
-            return (
-                "Predicted to be a strong fit for you with an estimated rating of "
-                f"{_safe_float(predicted_rating):.2f}."
-            )
-
-        svd_score = _safe_float(row.get("svd_score", 0.0))
-        return f"Predicted to be a strong fit for you with a personalized score of {svd_score:.2f}."
+        predicted_rating = _optional_predicted_rating(row.get("svd_predicted_rating"))
+        if genre_phrase and predicted_rating is not None:
+            options = [
+                f"Our AI predicts you will highly rate {movie_title} based on your unique taste profile and interest in {genre_phrase}.",
+                f"The SVD personalization model sees {movie_title} as a strong fit for you, pairing your interest in {genre_phrase} with an estimated rating of {predicted_rating:.2f}.",
+                f"Your latent taste profile points toward {movie_title}, with your interest in {genre_phrase} supporting a predicted rating of {predicted_rating:.2f}.",
+            ]
+        elif genre_phrase:
+            options = [
+                f"Our AI predicts you will highly rate {movie_title} based on your unique taste profile and interest in {genre_phrase}.",
+                f"The SVD personalization model sees {movie_title} as a strong fit for you, especially around {genre_phrase}.",
+                f"Your latent taste profile points toward {movie_title}, with your interest in {genre_phrase} reinforcing that prediction.",
+            ]
+        elif predicted_rating is not None:
+            options = [
+                f"Our AI predicts you will highly rate {movie_title} based on your unique taste profile.",
+                f"The SVD personalization model sees {movie_title} as a strong fit for you with an estimated rating of {predicted_rating:.2f}.",
+                f"Your latent taste profile points toward {movie_title}, with a predicted rating of {predicted_rating:.2f}.",
+            ]
+        else:
+            options = [
+                f"Our AI predicts you will highly rate {movie_title} based on your unique taste profile.",
+                f"The SVD personalization model sees {movie_title} as a strong fit for your preferences.",
+                f"Your latent taste profile points toward {movie_title} as a natural fit for what you usually enjoy.",
+            ]
+        return options[variant_index]
 
     raise ValueError(f"Unsupported explanation driver: {driver_name}")
 
 
-def _genre_match_explanation(
+def _shared_genres(
     recommendation_genres: Any,
     search_movie_genres: Any,
-) -> str:
-    """Describe the strongest shared genre overlap, if one exists."""
+    *,
+    limit: int = 2,
+) -> list[str]:
+    """Return the first shared genres between the search and recommendation."""
 
     recommended_genres = _parse_genres(recommendation_genres)
     if not recommended_genres:
-        return ""
+        return []
 
     search_genre_keys = {
         genre.casefold()
         for genre in _parse_genres(search_movie_genres)
     }
     if not search_genre_keys:
-        return ""
+        return []
 
-    shared_genres = [
+    return [
         genre
         for genre in recommended_genres
         if genre.casefold() in search_genre_keys
-    ][:2]
-    if not shared_genres:
-        return ""
-
-    return (
-        "A strong match based on your interest in "
-        f"{_join_with_and(shared_genres)}."
-    )
+    ][:max(limit, 0)]
 
 
 def _sentiment_suffix(vader_compound_score: Any) -> str:
@@ -239,10 +287,46 @@ def _sentiment_suffix(vader_compound_score: Any) -> str:
     return ""
 
 
-def _top_genres(raw_genres: Any, limit: int = 2) -> list[str]:
-    """Return the first genres listed for a movie, preserving source order."""
+def _template_variant_index(*seed_parts: Any, variant_count: int) -> int:
+    """Pick a deterministic template variant so similar rows read differently."""
 
-    return _parse_genres(raw_genres)[:max(limit, 0)]
+    if variant_count <= 0:
+        return 0
+
+    seed_text = "|".join(
+        str(part).strip()
+        for part in seed_parts
+        if part is not None and not pd.isna(part) and str(part).strip()
+    )
+    if not seed_text:
+        return 0
+
+    return sum(ord(character) for character in seed_text) % variant_count
+
+
+def _format_movie_reference(raw_title: Any) -> str:
+    """Return a human-friendly movie reference for explanation sentences."""
+
+    if raw_title is None or pd.isna(raw_title):
+        return "this movie"
+
+    cleaned_title = str(raw_title).strip()
+    if not cleaned_title or cleaned_title.lower() == "nan":
+        return "this movie"
+
+    return f'"{cleaned_title}"'
+
+
+def _optional_predicted_rating(value: Any) -> float | None:
+    """Return the SVD predicted rating when it is present and numeric."""
+
+    if value is None or pd.isna(value):
+        return None
+
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _parse_genres(raw_genres: Any) -> list[str]:
