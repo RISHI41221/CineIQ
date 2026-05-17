@@ -1,22 +1,34 @@
 # CineIQ
 
-Production-ready machine learning movie recommendation service built with FastAPI, hybrid ranking, sentiment-aware reranking, and explainable recommendations.
+Local-first machine learning movie recommendation service built with FastAPI, hybrid ranking, sentiment-aware reranking, explainable recommendations, and Dockerized delivery.
 
 ## 🎬 Overview
 
-Modern recommendation systems have to solve a familiar product problem: how do you keep users engaged without trapping them in a narrow recommendation loop?
+Recommendation systems face a classic product challenge: deliver results that feel personal and relevant without trapping users in a narrow recommendation loop.
 
-Pure content-based systems often overfit to metadata similarity. Pure collaborative systems can struggle with cold-start cases or sparse user behavior. Pure matrix factorization models personalize well, but can feel opaque and miss context from rich movie attributes.
+Content-only systems can become too metadata-driven. Collaborative systems can struggle with sparsity and cold-start cases. Matrix factorization models personalize well, but often hide their reasoning and require heavier infrastructure to serve reliably.
 
-**CineIQ** solves this by combining multiple recommendation signals into a single production-friendly web service:
+**CineIQ** solves this with a hybrid recommendation pipeline exposed through a production-grade FastAPI backend:
 
-- **Content-based ranking** uses TF-IDF over movie metadata and descriptive features to find semantically similar titles.
-- **Collaborative filtering** uses a precomputed Pearson correlation matrix to capture patterns from user rating behavior.
-- **Matrix factorization** uses a trained `scikit-surprise` SVD model to personalize results for a given user.
-- **Sentiment reranking** adjusts recommendation strength based on user-generated movie tags with VADER sentiment analysis.
-- **Explainable AI** generates human-readable reasons for each recommendation so the output is not just accurate, but interpretable.
+- **Content-based retrieval** uses TF-IDF over curated movie metadata and feature text.
+- **Collaborative filtering** uses a precomputed Pearson correlation matrix derived from user ratings.
+- **Matrix factorization** uses a trained `scikit-surprise` SVD model to personalize ranking for a specific user.
+- **Sentiment-aware reranking** uses VADER on user tag text to boost or dampen candidate scores.
+- **Explainable AI** adds a user-facing explanation so recommendations are not only accurate, but interpretable.
 
-The result is a hybrid recommendation API that balances relevance, personalization, sentiment context, and trust.
+The result is a recommendation service that balances similarity, personalization, sentiment context, and transparency in one API.
+
+## 📺 Demo Video
+
+[Watch the CineIQ Demo on YouTube/Loom here](link)
+
+## 🧠 The Hardware & MLOps Challenge
+
+CineIQ originally targeted low-cost cloud deployment, but the production behavior of the ML stack made that tradeoff impractical. Loading a trained `scikit-surprise` SVD artifact alongside the TF-IDF vectorizer and associated recommendation assets creates a memory profile that exceeds the limits of many free-tier platforms.
+
+In particular, free-tier instances capped at **512MB RAM** can trigger **Out-of-Memory (OOM) kills** during application startup or inference, especially when matrix factorization artifacts and vectorized text features are loaded concurrently. That makes the service unreliable, even when the code itself is correct.
+
+Rather than force the project into an unstable hosting model, CineIQ adopts a **local-first Docker deployment strategy**. This decision keeps the environment reproducible, preserves the full recommendation quality of the hybrid stack, and ensures the service runs consistently on developer machines without cloud memory constraints becoming the bottleneck.
 
 ## ✨ Features
 
@@ -24,7 +36,7 @@ The result is a hybrid recommendation API that balances relevance, personalizati
 - **Sentiment Reranker** that applies VADER-based post-processing on user tag signals to boost or dampen recommendation scores.
 - **Explainability Layer** that adds rule-based natural language explanations describing why each movie was recommended.
 - **FastAPI Backend** with startup-time model loading and production-oriented API structure.
-- **Dockerized Deployment** for consistent local development, demo environments, and cloud-ready packaging.
+- **Local-First Docker Deployment** for stable, reproducible execution of memory-intensive ML assets.
 
 ## 🧠 How It Works
 
@@ -47,7 +59,7 @@ The result is a hybrid recommendation API that balances relevance, personalizati
 
 ## 📁 Project Highlights
 
-- `main.py` - FastAPI application and API lifecycle management
+- `main.py` - FastAPI application and lifecycle-managed model loading
 - `cineiq_hybrid_backend.py` - hybrid recommendation engine
 - `cineiq_sentiment_reranker.py` - VADER-based reranking logic
 - `cineiq_explainability.py` - rule-based XAI module
@@ -81,34 +93,15 @@ Example response fields:
 - `sentiment_adjusted_score`
 - `explanation`
 
-## 💻 How to Run Locally
+## 🐳 How to Run
 
-Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-Start the FastAPI development server:
-
-```bash
-uvicorn main:app --reload
-```
-
-Once the server is running, the API will be available at:
-
-- `http://127.0.0.1:8000`
-- Swagger UI: `http://127.0.0.1:8000/docs`
-
-## 🐳 How to Run via Docker
-
-Build the image:
+Build the Docker image:
 
 ```bash
 docker build -t cineiq-api .
 ```
 
-Run the container:
+Run the container locally:
 
 ```bash
 docker run -p 8000:8000 cineiq-api
@@ -121,11 +114,11 @@ Once the container is running, the API will be available at:
 
 ## 📈 Why This Project Matters
 
-CineIQ is designed as more than a notebook experiment. It demonstrates how to take a machine learning recommendation workflow and package it as a deployable service with:
+CineIQ is designed as more than a notebook experiment. It demonstrates how to turn a recommendation workflow into a reproducible ML service with:
 
-- precomputed collaborative artifacts for faster startup
-- model lifecycle management in FastAPI
+- precomputed collaborative artifacts for faster, lighter startup
+- lifecycle-managed model loading in FastAPI
 - interpretable recommendation outputs
-- containerized deployment for reproducibility
+- Docker-based packaging for stable local execution
 
 This makes it a strong applied ML portfolio project at the intersection of recommender systems, MLOps, and production API engineering.
