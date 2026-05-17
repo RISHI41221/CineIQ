@@ -29,8 +29,5 @@ Assuming you are starting with a clean system and only have **VS Code** installe
 ### Step 1: Clone the Repository
 Open an Anaconda Prompt or a VS Code terminal and run the following commands to download the code to your `D:` drive:
 ```bash
-d:
-mkdir projects
-cd projects
-git clone <YOUR_GITHUB_REPO_URL_HERE>
+git clone <https://github.com/RISHI41221/CineIQ.git>
 cd CineIQ
