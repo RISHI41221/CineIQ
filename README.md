@@ -1,45 +1,117 @@
-#### Part A: Open and Run the Notebook
+# CineIQ: Hybrid Explainable Movie Recommendation Engine
+
+## Problem Statement
+
+Streaming platforms often trap users in an opaque "recommendation loop" where movies are suggested without any clear reason. CineIQ solves this by combining a **hybrid recommendation engine** with **sentiment reranking** and **Explainable AI (XAI)** so users can receive recommendations that are both personalized and understandable.
+
+The recommendation engine combines:
+
+- **SVD** for personalized recommendations
+- **Pearson correlation** for collaborative filtering
+- **TF-IDF** for content-based similarity
+- **Sentiment reranking** to refine recommendation quality
+- **Explainable AI** to show why each movie was recommended
+
+This project is built as a microservices application with:
+
+- A **FastAPI backend** running in **Docker**
+- A **Streamlit frontend** running locally
+
+---
+
+## Prerequisites
+
+Before you begin, install the following tools on your computer:
+
+- **Git**
+- **Docker Desktop**
+- **Anaconda**
+
+If you only have VS Code installed right now, install the tools above first.
+
+---
+
+## Installation & Setup (Step-by-Step)
+
+### Step 1: Clone the Repository
+
+Open a terminal in **VS Code** and run:
+
+```bash
+git clone https://github.com/your-username/CineIQ.git
+cd CineIQ
+```
+
+---
+
+### Step 2: Create the Python Environment
+
+Create a Conda environment:
+
+```bash
+conda create -n cineiq_env python=3.10 -y
+```
+
+Activate the environment:
+
+```bash
+conda activate cineiq_env
+```
+
+Install the required packages:
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+### Step 3: Download the Raw Data
+
+The raw dataset files are too large to store directly in GitHub. You must download them separately from Google Drive and place them into a folder named `raw_data/` in the project root.
+
+Download link:
+
+[INSERT_GOOGLE_DRIVE_LINK_HERE](https://example.com)
+
+After downloading, your project should contain a folder like this:
+
+```bash
+CineIQ/
+  raw_data/
+```
+
+---
+
+### Step 4: Run the Data Pipeline
+
+Before starting the app, you must generate the cleaned datasets and model artifacts.
 
 1. Open `CineIQ.ipynb` in VS Code.
-2. When prompted for a kernel, select **`cineiq_env`**.
-3. Run **all cells** from top to bottom.
+2. Run **all cells** in the notebook.
 
-The notebook is responsible for:
+This notebook will generate:
 
-- Cleaning and preparing the raw data
-- Creating processed datasets
-- Training and saving the **SVD model**
+- Cleaned data files
+- The trained **SVD model**
 
-Wait until the notebook finishes completely before moving to the next step.
-
-#### Part B: Generate the Pearson Artifacts
-
-After the notebook has finished, return to the terminal in the project root and run:
+After the notebook finishes, return to the terminal in the project root and run:
 
 ```bash
 python build_pearson.py
 ```
 
-This step generates the additional collaborative-filtering artifacts required by the recommendation engine.
-
-At the end of this step, the project should have the data and model files needed by the backend API.
+This command generates the remaining artifacts needed by the recommendation system.
 
 ---
 
-## Running the Application
+## Running the Application (Two Terminals)
 
-This project requires **two separate terminals**:
+You must use **two separate terminals**.
 
-- **Terminal 1** runs the FastAPI backend inside Docker
-- **Terminal 2** runs the Streamlit frontend locally
+### Terminal 1: Start the FastAPI Backend
 
-Do not close Terminal 1 while using the frontend, because the frontend depends on the backend API being available.
-
----
-
-### Terminal 1 (Backend)
-
-Open a terminal in the project root folder and build the Docker image:
+From the project root, build the Docker image:
 
 ```bash
 docker build -t cineiq-api .
@@ -51,54 +123,19 @@ Then run the backend container:
 docker run -p 8000:8000 cineiq-api
 ```
 
-Wait for the backend startup to complete before opening the frontend. Once the API is running successfully, it should be available at:
+Keep this terminal open while using the frontend.
 
-```bash
-http://127.0.0.1:8000
-```
+### Terminal 2: Start the Streamlit Frontend
 
-Keep this terminal open.
-
----
-
-### Terminal 2 (Frontend)
-
-Open a **new terminal** in VS Code.
-
-Move into the frontend folder:
+Open a **new terminal** in VS Code and run:
 
 ```bash
 cd frontend
-```
-
-Activate the Conda environment again:
-
-```bash
 conda activate cineiq_env
-```
-
-Start the Streamlit app:
-
-```bash
 streamlit run app.py
 ```
 
-If the command succeeds, Streamlit will usually open automatically in your browser. If it does not, copy the local URL shown in the terminal and open it manually.
-
----
-
-## How Explainability Works
-
-CineIQ does not just return a list of movie recommendations. It also generates dynamic explanation text so the user understands why a specific title appeared.
-
-The explanation engine can describe recommendations in several ways:
-
-- **TF-IDF:** Explains that a movie was selected because it shares similar themes or genres with the searched movie.
-- **Pearson:** Explains that users with similar viewing patterns or rating behavior also liked the recommended movie.
-- **SVD:** Explains that the model predicts the movie is a strong fit for the user's latent taste profile.
-- **VADER sentiment:** Appends extra context when audience sentiment is especially strong, such as highlighting highly positive reception.
-
-This makes the recommendation process more transparent and easier to trust.
+This will start the Streamlit frontend locally.
 
 ---
 
@@ -106,4 +143,3 @@ This makes the recommendation process more transparent and easier to trust.
 
 - **Deployment Video:** [INSERT_DEPLOYMENT_VIDEO_LINK_HERE](https://example.com)
 - **Full Project Report:** [INSERT_PROJECT_REPORT_LINK_HERE](https://example.com)
-
