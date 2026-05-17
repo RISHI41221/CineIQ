@@ -68,7 +68,7 @@ pip install -r requirements.txt
 
 ### Step 3: Download the Raw Data
 
-The raw dataset files are too large to store directly in GitHub. You must download them separately from Google Drive and place them into a folder named `raw_data/` in the project root.
+The raw dataset files are too large to store directly in GitHub. You must download raw data zip separately from Google Drive and extract it and place it in the project root .
 
 Download link:
 
