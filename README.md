@@ -25,7 +25,7 @@ Before you begin, make sure these tools are installed:
 
 - **Git**  To clone this repository. ([Download Git](https://git-scm.com/downloads))
 - **Docker Desktop**  Required to run the isolated backend API and heavy ML models. ([Download Docker](https://www.docker.com/products/docker-desktop/))
-- **Anaconda**  Required to manage the Python environment and run the data pipeline. ([Download Anaconda](https://www.anaconda.com/download))
+- **Miniconda(or Anaconda)**  Required to manage the Python environment and run the data pipeline. ([Download Anaconda](https://www.anaconda.com/download/success?reg=skipped))
 
 If you only have VS Code installed right now, install the three tools above first.
 
@@ -86,7 +86,7 @@ Download the zip file from:
 
 [INSERT_DRIVE_LINK_HERE](https://example.com)
 
-After downloading it, extract the folders directly into a `raw_data/` directory inside the project root.
+After downloading it, extract the folder  `raw_data/` and then directly place it into the project root.
 
 Your project should look like this afterward:
 
