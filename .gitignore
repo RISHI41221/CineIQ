@@ -25,3 +25,4 @@ ENV/
 Windows OS Junk
 Thumbs.db
 Desktop.ini
+!cleaned_data/movies_master.csv

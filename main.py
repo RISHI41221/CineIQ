@@ -25,8 +25,8 @@ logger = logging.getLogger("cineiq.api")
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 MOVIES_PATH = PROJECT_ROOT / "cleaned_data" / "movies_master.csv"
-RATINGS_PATH = PROJECT_ROOT / "raw_data" / "ml-25m" / "ratings.csv"
 SVD_MODEL_PATH = PROJECT_ROOT / "model_artifacts" / "svd_model.pkl"
+PEARSON_MODEL_PATH = PROJECT_ROOT / "model_artifacts" / "pearson_matrix.pkl"
 
 
 class RecommendationRequest(BaseModel):
@@ -63,36 +63,6 @@ def _load_movies_frame() -> pd.DataFrame:
             movies_df[column] = pd.to_numeric(movies_df[column], errors="coerce").fillna(0)
 
     return movies_df
-
-
-def _load_ratings_sample(
-    ratings_path: Path,
-    *,
-    sample_fraction: float = 0.024,
-    chunk_size: int = 250_000,
-    random_seed: int = 42,
-) -> pd.DataFrame:
-    if not ratings_path.exists():
-        raise FileNotFoundError(f"Ratings file not found: {ratings_path}")
-
-    sampled_chunks: list[pd.DataFrame] = []
-    chunk_reader = pd.read_csv(
-        ratings_path,
-        usecols=["userId", "movieId", "rating"],
-        chunksize=chunk_size,
-    )
-
-    for chunk_index, chunk in enumerate(chunk_reader):
-        sampled_chunk = chunk.sample(
-            frac=sample_fraction,
-            random_state=random_seed + chunk_index,
-        )
-        sampled_chunks.append(sampled_chunk)
-
-    if not sampled_chunks:
-        raise ValueError("ratings.csv did not yield any data for collaborative setup.")
-
-    return pd.concat(sampled_chunks, ignore_index=True)
 
 
 def _build_content_recommender(movies_df: pd.DataFrame) -> Callable[[str, int], pd.DataFrame | str]:
@@ -169,27 +139,10 @@ def _build_content_recommender(movies_df: pd.DataFrame) -> Callable[[str, int], 
 def _build_collaborative_recommender(
     movies_df: pd.DataFrame,
 ) -> Callable[[str, int], pd.DataFrame | str]:
-    ratings = _load_ratings_sample(RATINGS_PATH)
+    if not PEARSON_MODEL_PATH.exists():
+        raise FileNotFoundError(f"Pearson matrix file not found: {PEARSON_MODEL_PATH}")
 
-    user_counts = ratings["userId"].value_counts()
-    movie_counts = ratings["movieId"].value_counts()
-
-    active_users = user_counts[user_counts >= 20].index
-    popular_movies = movie_counts[movie_counts >= 50].index
-
-    ratings_small = ratings[
-        ratings["userId"].isin(active_users) & ratings["movieId"].isin(popular_movies)
-    ].copy()
-
-    if ratings_small.empty:
-        raise ValueError("Filtered ratings sample is empty; collaborative setup cannot continue.")
-
-    user_movie_matrix = ratings_small.pivot_table(
-        index="userId",
-        columns="movieId",
-        values="rating",
-    )
-    movie_similarity = user_movie_matrix.corr(method="pearson", min_periods=20)
+    movie_similarity = pd.read_pickle(PEARSON_MODEL_PATH)
 
     movie_title_frame = movies_df[["movieId", "clean_title"]].copy()
     movie_title_frame["clean_title"] = movie_title_frame["clean_title"].astype(str)
