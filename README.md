@@ -2,8 +2,6 @@
 
 An open, transparent, and highly personalized movie recommendation system built to break the "recommendation loop" of modern streaming platforms. 
 
-This project was developed as part of the **Even Semester Projects** (IIT Guwahati), under the mentorship of Arnav Gupta.
-
 ---
 
 ## 🛑 Problem Statement
