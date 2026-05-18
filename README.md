@@ -67,6 +67,7 @@ In the same **Anaconda Prompt**, run:
 ```bash
 conda create -n cineiq_env python=3.10 -y
 conda activate cineiq_env
+conda install -c conda-forge scikit-surprise numpy -y
 pip install -r requirements.txt
 ```
 
@@ -185,10 +186,11 @@ Then navigate directly to the frontend folder:
 cd path\to\CineIQ\frontend
 ```
 
-Activate the environment:
+Activate the environment and install the frontend dependencies:
 
 ```bash
 conda activate cineiq_env
+pip install -r requirements.txt
 ```
 
 Start the Streamlit frontend:
