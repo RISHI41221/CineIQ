@@ -1,0 +1,21 @@
+# Ignore raw datasets
+raw_data/
+
+# Ignore frontend UI (it runs locally outside Docker)
+frontend/
+
+# Ignore Jupyter Notebooks and pipeline scripts 
+CineIQ.ipynb
+build_pearson.py
+
+# Ignore local environments and caches
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Ignore OS junk
+Thumbs.db
+Desktop.ini
