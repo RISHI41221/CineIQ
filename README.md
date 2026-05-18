@@ -201,6 +201,16 @@ This launches the frontend locally so it can connect to the FastAPI backend.
 
 ---
 
+## 🧠 How the Explainable AI (XAI) Works
+
+Unlike standard recommendation engines that act as a "black box," CineIQ tells you exactly why a movie was chosen. The backend dynamically generates unique explanations based on the dominant algorithm:
+* **TF-IDF:** Highlights specific overlapping genres and themes.
+* **Pearson:** Identifies collaborative viewer taste patterns.
+* **SVD:** Surfaces predicted ratings based on latent user profiles.
+* **VADER:** Appends a 🔥 symbol and sentiment score if current audience reviews are overwhelmingly positive.
+
+---
+
 ## Project Resources
 
 - **Deployment Video:** [INSERT_DEPLOYMENT_VIDEO_LINK_HERE](https://example.com)
