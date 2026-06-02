@@ -85,7 +85,7 @@ The raw data files are too large to store directly on GitHub. This project depen
 
 Download the zip file from:
 
-[RAW_DATA](https://drive.google.com/drive/folders/1aWXqdSYvkniAeY1u5jJOVsGRq9UpyLu5?usp=drive_link)
+[RAW_DATA](https://drive.google.com/drive/folders/1kKuk_noqHgV84Utby42xbfkU7m1hYk1v?usp=sharing)
 
 After downloading it, extract the folder  `raw_data/` and then directly place it into the project root.
 
@@ -215,5 +215,5 @@ Unlike standard recommendation engines that act as a "black box," CineIQ tells y
 
 ## Project Resources
 
-- **Deployment Video:** [INSERT_DEPLOYMENT_VIDEO_LINK_HERE](https://example.com)
-- **Full Project Report:** [INSERT_PROJECT_REPORT_LINK_HERE](https://example.com)
+- **Deployment Video:** [DEPLOYMENT_VIDEO](https://drive.google.com/drive/folders/1kKuk_noqHgV84Utby42xbfkU7m1hYk1v?usp=sharing)
+- **Full Project Report:** [PROJECT_REPORT](https://drive.google.com/drive/folders/1kKuk_noqHgV84Utby42xbfkU7m1hYk1v?usp=sharing)
